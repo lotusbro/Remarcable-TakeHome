@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>Search</title></head>
+  <body>
+    <h1>Search</h1>
+
+    <input id="search_description" placeholder="Search description..." />
+    <select id="category_filter"><option value="">All categories</option></select>
+    <select id="tag_filter" multiple></select>
+
+    <ul id="output"></ul>
+
+    <script>
+      const search_description = document.getElementById("search_description");
+      const category_filter = document.getElementById("category_filter");
+      const tag_filter = document.getElementById("tag_filter");
+      const output = document.getElementById("output");
+
+      
+      Promise.all([
+        fetch("/api/categories/").then(response => response.json()),
+        fetch("/api/tags/").then(response => response.json())
+      ]).then(([categories, tags]) => {
+        categories.forEach(c => category_filter.add(new Option(c.name, c.id))); 
+        tags.forEach(t => tag_filter.add(new Option(t.name, t.id)));
+        search(); 
+      })
+      .catch(e => console.error("Failed to load",e));
+      
+
+      function search() {
+        const params = new URLSearchParams();
+        const description = search_description.value.trim();
+        if (description) 
+        {
+            params.set("search", description);
+        }
+        if (category_filter.value) 
+        {
+            params.set("category_id", category_filter.value);
+        } 
+        for(var i=0; i< tag_filter.options.length;i++)
+        {
+            var option= tag_filter.options[i];
+            if (option.selected)
+            {
+                params.append("tag_id", option.value);
+            }
+        }
+
+        fetch("/api/products/?" + params.toString())
+          .then(response => response.json())
+          .then(list => {
+            output.innerHTML = "";
+            if (!list.length) 
+            {  
+                output.textContent = "No results.";  
+            } 
+            list.forEach(p => 
+            {
+              const li = document.createElement("li");
+              li.textContent = (p.name) +":"+ (p.description);
+              output.appendChild(li);
+            });
+          });
+      }
+
+      search_description.oninput = search;
+      category_filter.onchange = search;
+      tag_filter.onchange = search;
+    </script>
+  </body>
+</html>
